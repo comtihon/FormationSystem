@@ -3,65 +3,36 @@ using System.Collections.Generic;
 using System;
 using VRageMath;
 using VRage;
+using System.Text;
+using System.Collections.Immutable;
 
 namespace IngameScript
 {
     partial class Program : MyGridProgram
     {
         // Leader Script Version 1.1
+        // Compatible with follower/rover script version 1.2
+
         // ============= Settings ==============
-        // The id of the system that the followers are listening on.
-        // Any character is allowed except ;
-        const string followerSystem = "System1";
-
-        // This is the frequency that the script is running at. If you are experiencing lag
-        // because of this script try decreasing this value. Valid values:
-        // Update1 : Runs the script every tick
-        // Update10 : Runs the script every 10th tick
-        // Update100 : Runs the script every 100th tick
-        // Note due to limitations, the script will only run every 10th tick max when not using itself.
-        readonly UpdateFrequency tickSpeed = UpdateFrequency.Update1;
-
-        // The name of the sensor group that the script will use to keep track of the leader ship. 
-        // Leave blank to use all connected sensors.
-        const string sensorGroup = "";
-
-        // The distance that the ship will scan while using the scan command.	
-        const double scanDistance = 1000;
-
-        // The name of the cockpit in the ship. You may leave this blank, but it is highly recommended	
-        // to set this field to avoid unexpected behavior related to orientation.	
-        // If this cockpit is not found, the script will attempt to find a suitable cockpit on its own.	
-        const string cockpitName = "";
-
-        // When true, the script will be able to see blocks that are connected via rotor, connector, etc.
-        const bool useSubgridBlocks = false;
-
-        // When true, the script will attempt to reconnect to the previous leader on start.
-        // This functions in a similar way to the find command if an exact match is not found.
-        readonly bool attemptReconnection = true;
-
-        // When true, the script will broadcast its own location when no other leader is specified.
-        readonly bool allowFollowSelf = true;
-
-        // When true, the script will use the cameras to try to keep a lock on the designated leader.
-        // This is a CPU intensive process.
-        readonly bool activeRaycasting = false;
-
-        // When true, the script will align the followers with gravity.
-        // Recomended for rovers.
-        readonly bool alignFollowersToGravity = false;
+        // Settings are located entirely in Custom Data.
+        // To edit "Custom Data", check this block's menu and click the button above the "Edit" button. 
+        // Run the script once to generate an initial config.
+        // Recompile the script after making any changes.
         // =====================================
 
         // ============= Commands ==============
-        // <id> : either blank (to send to all) or the shipId on the follower 
+        // All commands can be used by running them on the programmable block.
+        // Arguments with parentheses are optional.
+        //
+        // <id> : either blank (to send to all) or the followerId of the follower 
         // <id>:setoffset;x;y;z : sets the offset variable to this value on the follower 
         // <id>:addoffset;x;y;z : adds these values to the current offset on the follower 
         // <id>:stop : stops the followers and releases control to you
         // <id>:start : starts the followers after a stop command
         // <id>:starthere : starts the followers in the current position
-        // <id>:reset : resets the followers to use the default offset
         // <id>:clear : forces the script to forget a previous leader when calculateMissingTicks is true
+        // <id>:action;block_name : triggers the specified timer block
+        // <id>:reset : loads the current config, or the first offset
         // <id>:save(;name) : saves the configuration on the follower to the current offset
         // <id>:savehere(;name) : saves the configuration on the follower to the current position
         // <id>:load;name : loads the offset from the configuration on the follower 
@@ -75,10 +46,12 @@ namespace IngameScript
 
         // You can ignore any unreachable code warnings that appear in this script.
 
-        const string transmitTag = "FSLeader" + followerSystem;
-        const string transmitCommandTag = "FSCommand" + followerSystem;
+        Settings settings;
 
         IMyShipController rc;
+        readonly string transmitTag = "FSLeader";
+        readonly string transmitCommandTag = "FSCommand";
+
         List<IMySensorBlock> sensors = new List<IMySensorBlock>();
         List<IMyCameraBlock> forwardCameras = new List<IMyCameraBlock>();
         long target = 0;
@@ -87,6 +60,7 @@ namespace IngameScript
         int runtime = 0;
         bool isDisabled = false;
         const bool debug = false;
+        readonly char commandSep;
 
         // Used for active raycasting.
         List<IMyCameraBlock> allCameras;
@@ -95,46 +69,60 @@ namespace IngameScript
 
         public Program ()
         {
-            if (string.IsNullOrWhiteSpace(sensorGroup))
-                sensors = GetBlocks<IMySensorBlock>(useSubgridBlocks);
+            settings = new Settings(Me);
+            settings.Load();
+
+            if (settings.spaceSeparators.Value)
+                commandSep = ' ';
             else
-                sensors = GetBlocks<IMySensorBlock>(sensorGroup, useSubgridBlocks);
+                commandSep = ';';
+
+            transmitTag += settings.followerSystemId.Value;
+            transmitCommandTag += settings.followerSystemId.Value;
+
+            bool useSubgrids = settings.useSubgridBlocks.Value;
+
+            if (settings.sensorGroup.Value == "-")
+                sensors = GetBlocks<IMySensorBlock>(useSubgrids);
+            else
+                sensors = GetBlocks<IMySensorBlock>(settings.sensorGroup.Value, useSubgrids);
 
             // Prioritize the given cockpit name	
-            rc = GetBlock<IMyShipController>(cockpitName, useSubgridBlocks);
+            rc = GetBlock<IMyShipController>(settings.cockpitName.Value, useSubgrids);
             if (rc == null) // Second priority cockpit	
-                rc = GetBlock<IMyCockpit>(useSubgridBlocks);
-            if (rc == null) // Thrid priority remote control	
-                rc = GetBlock<IMyRemoteControl>(useSubgridBlocks);
+                rc = GetBlock<IMyCockpit>(useSubgrids);
+            if (rc == null) // Third priority remote control	
+                rc = GetBlock<IMyRemoteControl>(useSubgrids);
             if (rc == null) // No cockpits found.
                 throw new Exception("No cockpit/remote control found. Set the cockpitName field in settings.");
 
-            if (activeRaycasting)
+            if (settings.activeRaycasting.Value)
                 allCameras = new List<IMyCameraBlock>();
-            foreach (IMyCameraBlock c in GetBlocks<IMyCameraBlock>(useSubgridBlocks))
+            foreach (IMyCameraBlock c in GetBlocks<IMyCameraBlock>(useSubgrids))
             {
                 if (EqualsPrecision(Vector3D.Dot(rc.WorldMatrix.Forward, c.WorldMatrix.Forward), 1, 0.01))
                 {
                     forwardCameras.Add(c);
                     c.EnableRaycast = true;
                 }
-                if(activeRaycasting)
+                if(settings.activeRaycasting.Value)
                     allCameras.Add(c);
             }
 
             LoadStorage();
 
-            if (tickSpeed == UpdateFrequency.Update10)
+            if (settings.tickSpeed.Value == UpdateFrequency.Update10)
                 echoFrequency = 10;
-            else if (tickSpeed == UpdateFrequency.Update100)
+            else if (settings.tickSpeed.Value == UpdateFrequency.Update100)
                 echoFrequency = 1;
 
-            if(!isDisabled)
-                Runtime.UpdateFrequency = tickSpeed;
-            Echo("Ready");
+            if (!isDisabled)
+                Runtime.UpdateFrequency = settings.tickSpeed.Value;
+
+            Echo("Ready.");
         }
 
-        public void Save ()
+        public void SaveStorage ()
         {
             char disabled = '0';
             if (isDisabled)
@@ -149,7 +137,7 @@ namespace IngameScript
         {
             if (string.IsNullOrWhiteSpace(Storage))
             {
-                Save();
+                SaveStorage();
                 return;
             }
 
@@ -167,7 +155,7 @@ namespace IngameScript
 
                 long target = long.Parse(args [1]);
                 string targetName = args [2];
-                if (!attemptReconnection)
+                if (!settings.attemptReconnection.Value)
                 {
                     this.target = target;
                     this.targetName = targetName;
@@ -208,7 +196,7 @@ namespace IngameScript
                         this.target = lastResult.Value.EntityId;
                         this.targetName = lastResult.Value.Name;
                         this.isDisabled = wasDisabled;
-                        Save();
+                        SaveStorage();
                     }
                     else
                     {
@@ -216,14 +204,14 @@ namespace IngameScript
                         this.target = 0;
                         this.targetName = targetName;
                         this.isDisabled = wasDisabled;
-                        Save();
+                        SaveStorage();
                     }
                 }
 
             }
             catch
             {
-                Save();
+                SaveStorage();
             }
         }
 
@@ -263,7 +251,7 @@ namespace IngameScript
                                 {
                                     info = i;
                                     target = i.EntityId;
-                                    Save(); // Update save data with the id
+                                    SaveStorage(); // Update save data with the id
                                     break;
                                 }
                             }
@@ -271,7 +259,7 @@ namespace IngameScript
 
                     }
 
-                    if (activeRaycasting && target != 0 && !previousHit.IsEmpty() && !info.HasValue)
+                    if (settings.activeRaycasting.Value && target != 0 && !previousHit.IsEmpty() && !info.HasValue)
                     {
                         float sec = Math.Abs(runtime - hitRuntime);
                         if (Runtime.UpdateFrequency == UpdateFrequency.Update10)
@@ -298,13 +286,13 @@ namespace IngameScript
 
                     if (info.HasValue)
                     {
-                        if (activeRaycasting)
+                        if (settings.activeRaycasting.Value)
                         {
                             previousHit = info.Value;
                             hitRuntime = runtime;
                         }
                         Vector3D up = info.Value.Orientation.Up;
-                        if (alignFollowersToGravity)
+                        if (settings.alignFollowersToGravity.Value)
                         {
                             Vector3D gravity = rc.GetNaturalGravity();
                             if (gravity != Vector3D.Zero)
@@ -314,10 +302,10 @@ namespace IngameScript
                         IGC.SendBroadcastMessage<MyTuple<MatrixD, Vector3D, long>>(transmitTag, new MyTuple<MatrixD, Vector3D, long>(worldMatrix, info.Value.Velocity, info.Value.EntityId));
                     }
                 }
-                else if(allowFollowSelf)
+                else if(settings.allowFollowSelf.Value)
                 {
                     MatrixD matrix = rc.WorldMatrix;
-                    if (alignFollowersToGravity)
+                    if (settings.alignFollowersToGravity.Value)
                     {
                         Vector3D gravity = rc.GetNaturalGravity();
                         if (gravity != Vector3D.Zero)
@@ -341,21 +329,25 @@ namespace IngameScript
 
         void WriteEcho ()
         {
+            StringBuilder sb = new StringBuilder();
             if (targetName != null)
             {
+                sb.AppendLine("Running.");
                 if (target == 0)
-                    Echo($"Running.\nSearching for {targetName}...");
+                    sb.Append("Searching for ").Append(targetName).Append("...").AppendLine();
                 else
-                    Echo($"Running.\nFollowing {targetName}");
+                    sb.Append("Following ").Append(targetName).AppendLine();
             }
-            else if (allowFollowSelf)
+            else if (settings.allowFollowSelf.Value)
             {
-                Echo("Running.\nFollowing me.");
+                sb.AppendLine("Running.");
+                sb.AppendLine("Following me.");
             }
             else
             {
-                Echo("Idle.");
+                sb.AppendLine("Idle.");
             }
+            Echo(sb.ToString());
         }
 
         void ProcessCommand (string argument)
@@ -380,13 +372,16 @@ namespace IngameScript
 
         void TransmitCommand (string target, string data, TransmissionDistance distance = TransmissionDistance.AntennaRelay)
         {
-            MyTuple<string, string> msg = new MyTuple<string, string>(target, data);
-            IGC.SendBroadcastMessage<MyTuple<string, string>>(transmitCommandTag, msg, distance);
+            string[] dataSplit = data.Split(new[] { commandSep }, StringSplitOptions.RemoveEmptyEntries);
+            MyTuple<string, ImmutableArray<string>> msg = new MyTuple<string, ImmutableArray<string>>(target, dataSplit.ToImmutableArray());
+            IGC.SendBroadcastMessage<MyTuple<string, ImmutableArray<string>>>(transmitCommandTag, msg, distance);
         }
 
         void SelfCommand (string argument)
         {
-            string [] cmdArgs = argument.Split(';');
+            string [] cmdArgs = argument.Split(new[] { commandSep }, StringSplitOptions.RemoveEmptyEntries);
+            if (cmdArgs.Length < 1)
+                return;
             switch (cmdArgs [0])
             {
                 case "stop":
@@ -395,11 +390,11 @@ namespace IngameScript
                     break;
                 case "start":
                     isDisabled = false;
-                    Runtime.UpdateFrequency = tickSpeed;
+                    Runtime.UpdateFrequency = settings.tickSpeed.Value;
                     break;
                 case "reset":
                     isDisabled = false;
-                    Runtime.UpdateFrequency = tickSpeed;
+                    Runtime.UpdateFrequency = settings.tickSpeed.Value;
 
                     target = 0;
                     targetName = null;
@@ -407,25 +402,25 @@ namespace IngameScript
                     break;
                 case "scan":
                     isDisabled = false;
-                    Runtime.UpdateFrequency = tickSpeed;
+                    Runtime.UpdateFrequency = settings.tickSpeed.Value;
 
                     MyDetectedEntityInfo? info = Raycast();
                     if (info.HasValue)
                     {
                         target = info.Value.EntityId;
                         targetName = info.Value.Name;
-                        if (tickSpeed == UpdateFrequency.Update1)
+                        if (settings.tickSpeed.Value == UpdateFrequency.Update1)
                             Runtime.UpdateFrequency = UpdateFrequency.Update10;
                     }
                     WriteEcho();
                     break;
                 case "find": // find;name
                     isDisabled = false;
-                    Runtime.UpdateFrequency = tickSpeed;
+                    Runtime.UpdateFrequency = settings.tickSpeed.Value;
 
                     target = 0;
                     targetName = cmdArgs [1];
-                    if (tickSpeed == UpdateFrequency.Update1)
+                    if (settings.tickSpeed.Value == UpdateFrequency.Update1)
                         Runtime.UpdateFrequency = UpdateFrequency.Update10;
                     WriteEcho();
                     break;
@@ -433,16 +428,16 @@ namespace IngameScript
                     TransmitCommand("", argument);
                     return;
             }
-            Save();
+            SaveStorage();
         }
 
         MyDetectedEntityInfo? Raycast ()
         {
             foreach (IMyCameraBlock c in forwardCameras)
             {
-                if (c.CanScan(scanDistance))
+                if (c.CanScan(settings.scanDistance.Value))
                 {
-                    MyDetectedEntityInfo info = c.Raycast(scanDistance);
+                    MyDetectedEntityInfo info = c.Raycast(settings.scanDistance.Value);
                     if (info.IsEmpty())
                         return null;
                     return info;

@@ -48,6 +48,7 @@
     </AdditionalFiles>
     <Compile Include="Program.cs" />
     <AdditionalFiles Include="MDK\whitelist.cache" />
+    <Compile Include="Settings.cs" />
     <Compile Include="WheelControl.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -55,6 +56,7 @@
   </ItemGroup>
   <Import Project="..\..\Mixins\BlockFinder\BlockFinder\BlockFinder.projitems" Label="Shared" />
   <Import Project="..\..\Mixins\PID\PID\PID.projitems" Label="Shared" />
+  <Import Project="..\FollowerShared\FollowerShared.projitems" Label="Shared" />
   <Import Project="..\IniConfig\IniConfig.projitems" Label="Shared" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="AfterBuild">

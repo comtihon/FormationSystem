@@ -27,6 +27,7 @@
   <ItemGroup>
     <Reference Include="netstandard" />
     <Reference Include="System" />
+    <Reference Include="System.Collections.Immutable, Version=1.2.3.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -52,10 +53,16 @@
   <ItemGroup>
     <Content Include="thumb.jpg" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\.editorconfig">
+      <Link>.editorconfig</Link>
+    </None>
+  </ItemGroup>
   <Import Project="..\..\Mixins\BlockFinder\BlockFinder\BlockFinder.projitems" Label="Shared" />
   <Import Project="..\..\Mixins\GyroControl\GyroControl\GyroControl.projitems" Label="Shared" />
   <Import Project="..\..\Mixins\ThrustControl2\ThrustControl2\ThrustControl2.projitems" Label="Shared" />
   <Import Project="..\..\Mixins\PID\PID\PID.projitems" Label="Shared" />
+  <Import Project="..\FollowerShared\FollowerShared.projitems" Label="Shared" />
   <Import Project="..\IniConfig\IniConfig.projitems" Label="Shared" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="AfterBuild">

@@ -17,6 +17,13 @@ Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "GyroControl", "..\Mixins\Gy
 EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "PID", "..\Mixins\PID\PID\PID.shproj", "{F72C9C5D-FEFA-4787-9974-12C127CE1B80}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{1F0D6F01-7B11-4B05-941B-01518EE2092D}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "FollowerShared", "FollowerShared\FollowerShared.shproj", "{A1C426F5-3A22-4619-8EB2-AF871B4279BC}"
+EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "IniConfig", "IniConfig\IniConfig.shproj", "{BEC2D769-D1DF-4439-836A-459375F5E5ED}"
 EndProject
 Global
@@ -24,13 +31,16 @@ Global
 		..\Mixins\BlockFinder\BlockFinder\BlockFinder.projitems*{61eba249-19f3-48b6-a25b-a4cee90168ba}*SharedItemsImports = 13
 		IniConfig\IniConfig.projitems*{8522c470-78b8-421e-ad2a-d66404dfd461}*SharedItemsImports = 4
 		..\Mixins\BlockFinder\BlockFinder\BlockFinder.projitems*{8522c470-78b8-421e-ad2a-d66404dfd461}*SharedItemsImports = 4
+		FollowerShared\FollowerShared.projitems*{8b17a575-b3c3-46c5-9884-03f38585271b}*SharedItemsImports = 4
 		IniConfig\IniConfig.projitems*{8b17a575-b3c3-46c5-9884-03f38585271b}*SharedItemsImports = 4
 		..\Mixins\BlockFinder\BlockFinder\BlockFinder.projitems*{8b17a575-b3c3-46c5-9884-03f38585271b}*SharedItemsImports = 4
 		..\Mixins\GyroControl\GyroControl\GyroControl.projitems*{8b17a575-b3c3-46c5-9884-03f38585271b}*SharedItemsImports = 4
 		..\Mixins\PID\PID\PID.projitems*{8b17a575-b3c3-46c5-9884-03f38585271b}*SharedItemsImports = 4
 		..\Mixins\ThrustControl2\ThrustControl2\ThrustControl2.projitems*{8b17a575-b3c3-46c5-9884-03f38585271b}*SharedItemsImports = 4
 		..\Mixins\GyroControl\GyroControl\GyroControl.projitems*{9e7a19f7-673a-48f8-ace6-07bcb0cfbb8d}*SharedItemsImports = 13
+		FollowerShared\FollowerShared.projitems*{a1c426f5-3a22-4619-8eb2-af871b4279bc}*SharedItemsImports = 13
 		IniConfig\IniConfig.projitems*{bec2d769-d1df-4439-836a-459375f5e5ed}*SharedItemsImports = 13
+		FollowerShared\FollowerShared.projitems*{cf55398b-ad90-49a8-90e9-8b3db1e0175b}*SharedItemsImports = 4
 		IniConfig\IniConfig.projitems*{cf55398b-ad90-49a8-90e9-8b3db1e0175b}*SharedItemsImports = 4
 		..\Mixins\BlockFinder\BlockFinder\BlockFinder.projitems*{cf55398b-ad90-49a8-90e9-8b3db1e0175b}*SharedItemsImports = 4
 		..\Mixins\PID\PID\PID.projitems*{cf55398b-ad90-49a8-90e9-8b3db1e0175b}*SharedItemsImports = 4

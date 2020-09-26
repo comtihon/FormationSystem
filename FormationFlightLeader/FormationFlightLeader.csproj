@@ -48,6 +48,7 @@
     </AdditionalFiles>
     <Compile Include="Program.cs" />
     <AdditionalFiles Include="MDK\whitelist.cache" />
+    <Compile Include="Settings.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="thumb.jpg" />

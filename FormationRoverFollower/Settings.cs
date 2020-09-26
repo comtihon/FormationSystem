@@ -25,18 +25,14 @@ namespace IngameScript
         {
             private readonly IMyProgrammableBlock me;
             private readonly MyIni ini = new MyIni();
-            private const string section = "FormationSystem-Follower";
+            private const string section = "FormationSystem-Rover";
             private bool init = false;
 
             public IniValueString followerSystemId = new IniValueString(section, "followerSystemId", "System1", 
-                "\n The system id that the ship should listen to.");
+                "\n The id that the ship should listen to.");
             public IniValueString followerId = new IniValueString(section, "followerId", "Drone1",
                 "\n The follower id of this ship." +
                 "\n All remote commands not prefixed with this id will be ignored.");
-            public IniValueBool enableCollisionAvoidence = new IniValueBool(section, "enableCollisionAvoidence", false, 
-                "\n When enabled, the script will attempt to avoid collisions by stopping" +
-                "\n when there is something between itself and its designated position." +
-                "\n This is a CPU intensive process!");
             public IniValueString cockpitName = new IniValueString(section, "cockpitName", "Cockpit",
                 "\n The name of the cockpit in the ship. If this cockpit is not" +
                 "\n found, the script will attempt to find one on its own.");
@@ -50,9 +46,6 @@ namespace IngameScript
                 "\n When true, upon leaving the cockpit, the script will set the offset to" +
                 "\n the current position instead of returning to its designated point." +
                 "\n This is equivalent to the starthere command.");
-            public IniValueDouble maxSpeed = new IniValueDouble(section, "maxSpeed", 20, 
-                "\n The maximum speed that the ship can go to correct itself." +
-                "\n This is relative to the current speed of the leader ship.");
             public IniValueEnum<UpdateFrequency> tickSpeed = new IniValueEnum<UpdateFrequency>(section, "tickSpeed", UpdateFrequency.Update1, 
                 "\n This is the frequency that the script is running at. If you are" +
                 "\n experiencing lag because of this script, try decreasing this value." +
@@ -98,12 +91,10 @@ namespace IngameScript
                     {
                         followerSystemId.Load(ini, me);
                         followerId.Load(ini, me);
-                        enableCollisionAvoidence.Load(ini, me);
                         cockpitName.Load(ini, me);
                         useSubgridBlocks.Load(ini, me);
                         autoStop.Load(ini, me);
                         autoStartHere.Load(ini, me);
-                        maxSpeed.Load(ini, me);
                         tickSpeed.Load(ini, me);
                         calculateMissingTicks.Load(ini, me);
                         maxMissingScriptTicks.Load(ini, me);
@@ -133,12 +124,10 @@ namespace IngameScript
             {
                 followerSystemId.Save(ini);
                 followerId.Save(ini);
-                enableCollisionAvoidence.Save(ini);
                 cockpitName.Save(ini);
                 useSubgridBlocks.Save(ini);
                 autoStop.Save(ini);
                 autoStartHere.Save(ini);
-                maxSpeed.Save(ini);
                 tickSpeed.Save(ini);
                 calculateMissingTicks.Save(ini);
                 maxMissingScriptTicks.Save(ini);
@@ -146,7 +135,7 @@ namespace IngameScript
                 configs.Save(ini);
 
                 ini.SetSectionComment(section,
-                    " Formation System - Follower Script Version 1.2" +
+                    " Formation System - Rover Script Version 1.2" +
                     "\n If you edit this configuration manually, you must recompile the" +
                     "\n script afterwards or you could lose the changes.");
                 me.CustomData = ini.ToString();

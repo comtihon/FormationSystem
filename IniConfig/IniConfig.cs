@@ -41,10 +41,18 @@ namespace IngameScript
                 }
             }
 
-            public void Load (MyIni ini)
+            public void Load (MyIni ini, IMyTerminalBlock src)
             {
-                if (!TryGetValue(ini.Get(key), out value))
-                    throw new IniMissingException(key.Name);
+                T temp;
+                if (TryGetValue(ini.Get(key), out temp))
+                {
+                    value = temp;
+                    return;
+                }
+
+                Save(ini);
+                src.CustomData = ini.ToString();
+                throw new IniMissingException(key.Name);
             }
 
             public void Save (MyIni ini)
@@ -90,14 +98,25 @@ namespace IngameScript
 
         public class IniValueString : IniValue<string>
         {
-            public IniValueString (string section, string key, string defaultValue = null, string comment = null) : base(section, key, defaultValue, comment) { }
+            public IniValueString (string section, string key, string defaultValue = null, string comment = null) : base(section, key, defaultValue, comment) 
+            {
+                if (value.Length > 0 && (value[0] == ' ' || value[value.Length - 1] == ' '))
+                    value = "\"" + value + "\"";
+                else if (string.IsNullOrEmpty(value))
+                    value = "\"\"";
+            }
             protected override void Set (MyIni ini)
             {
                 ini.Set(key, value);
             }
             protected override bool TryGetValue (MyIniValue storage, out string value)
             {
-                return storage.TryGetString(out value);
+                if(storage.TryGetString(out value))
+                {
+                    value = value.Trim('"');
+                    return true;
+                }
+                return false;
             }
         }
 
@@ -174,12 +193,12 @@ namespace IngameScript
         public class IniMissingException : IniParseException
         {
             public IniMissingException (string id)
-                : base("Value for '" + id + "' is missing or invalid")
+                : base("Value for '" + id + "' was missing or invalid, recompile when ready.")
             {
             }
 
             public IniMissingException (string id, Exception innerException)
-                : base("Value for '" + id + "' is missing or invalid", innerException)
+                : base("Value for '" + id + "' was missing or invalid, recompile when ready.", innerException)
             {
             }
         }
